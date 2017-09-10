@@ -12,18 +12,25 @@
   var CheckList = App.CheckList;
   var webshim = window.webshim;
   var remoteDS = new RemoteDataStore(SERVER_URL);
-  var myTruck = new Truck('ncc-1701', remoteDS); // замена new DataStore()
+  var myTruck = new Truck('ncc-1701', new DataStore()); // замена remoteDS - использует ajax DataStore() - не использует Ajax
   window.myTruck = myTruck; // экспорт экземпляра Truck
   var checkList = new CheckList(CHECKLIST_SELECTOR);
   checkList.addClickHandler(myTruck.deliverOrder.bind(myTruck));
   var formHandler = new FormHandler(FORM_SELECTOR);
 
   formHandler.addSubmitHandler(function (data) {
-    myTruck.createOrder.call(myTruck, data);
-    checkList.addRow.call(checkList, data);
+    return myTruck.createOrder.call(myTruck, data).then(function () {
+      checkList.addRow.call(checkList, data); // вызывается если createOrder выполнен без ошибок и исключений
+    },
+    function () {
+      alert('Server unreachable. Try again later.');
+    }
+    );
   });
 
   formHandler.addInputHandler(Validation.isCompanyEmail);
+
+  myTruck.printOrders(checkList.addRow.bind(checkList));
 
   webshim.polyfill('forms forms-ext');
   webshim.setOptions('forms', { addValidators: true, lazyCustomMessage: true });
